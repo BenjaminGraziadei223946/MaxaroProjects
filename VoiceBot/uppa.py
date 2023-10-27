@@ -12,13 +12,13 @@ from azure.communication.callautomation import (
     MicrosoftTeamsUserIdentifier,
     )
 # target endpoint for ACS User
-phone_number = MicrosoftTeamsUserIdentifier("bgraziadei@maxaro.nl")
+teams_id = MicrosoftTeamsUserIdentifier("bgraziadei@maxaro.nl")
 
 # make invitation
-call_invite = CallInvite(target=phone_number)
+call_invite = CallInvite(target=teams_id)
 
 # callback url to receive callback events
-callback_url = "https://<MY-EVENT-HANDLER-URL>/events"
+callback_url = "https://eventscallback.azurewebsites.net"
 
 # send out the invitation, creating call
 result = client.create_call(call_invite, callback_url)

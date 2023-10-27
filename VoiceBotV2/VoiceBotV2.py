@@ -29,8 +29,8 @@ speech_config.speech_synthesis_voice_name = "en-US-GuyNeural"
 speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config)
 
-#with open(r"C:\Users\bgraziadei\OneDrive - Maxaro\Documenten\GitHub\MaxaroProjects\VoiceBot\SystemMessage.txt") as f:
-#    sys_message = f.read()
+with open(r"C:\Users\bgraziadei\OneDrive - Maxaro\Documenten\GitHub\MaxaroProjects\VoiceBot\SystemMessage.txt") as f:
+    sys_message = f.read()
 
 conversation = [{"role": "system", "content": ""}]
 
