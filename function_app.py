@@ -17,3 +17,13 @@ def AcceptCall(event: func.EventGridEvent):
     })
 
     logging.info('Python EventGrid trigger processed an event %s', result)
+
+
+@app.event_grid_trigger(arg_name="azeventgrid")
+def EventGridTrigger(azeventgrid: func.EventGridEvent):
+    logging.info('Python EventGrid trigger processed an event')
+
+
+@app.event_grid_trigger(arg_name="azeventgrid")
+def EventGridTrigger(azeventgrid: func.EventGridEvent):
+    logging.info('Python EventGrid trigger processed an event')
