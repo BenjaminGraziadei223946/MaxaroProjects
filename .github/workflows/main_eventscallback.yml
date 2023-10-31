@@ -70,6 +70,6 @@ jobs:
           app-name: 'eventscallback'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8AB84937201F4A3FB24EB946AFB93ABA }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_1674FA1825DD4B0B8856A5F10353E69E }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
