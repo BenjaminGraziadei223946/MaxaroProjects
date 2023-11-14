@@ -41,7 +41,10 @@ if uploaded_file:
         df = pd.read_excel(file)
         df['Product description updated'] = df.apply(lambda row: replace_words_v2(row['Product description'], row), axis=1)
         excel_file = create_excel_file(df)
-        all_files.append((f"output{i}.xlsx", excel_file))
+        if len(all_files) == 1:
+            all_files.append((f"{uploaded_file.name}.xlsx", excel_file))
+        else:
+            all_files.append((f"result.xlsx", excel_file))
 
     # If only one file is processed
     if len(all_files) == 1:
