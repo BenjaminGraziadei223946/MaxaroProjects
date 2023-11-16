@@ -25,7 +25,7 @@ def replace_words_v2(description, row):
     
     for header in df.columns:
         low = header.lower()
-        st.write(f'{row}')
+        st.write(f'{row[header]}')
         if header in description:
             value = row[header]
             
@@ -33,6 +33,13 @@ def replace_words_v2(description, row):
                 continue
             description = description.replace(f'[{header}]', str(value))
     return description
+
+def find_correct_column(df, target_column):
+    column_lower = target_column.lower()
+    for col in df.columns:
+        if col.lower() in column_lower:
+            return col
+    return None
 
 all_files = []
 uploaded_file = st.file_uploader("Upload File", type="xlsx", accept_multiple_files=True)
@@ -42,10 +49,13 @@ if uploaded_file:
     
     for i, file in enumerate(files_to_process):
         df = pd.read_excel(file)
-        df['Product description updated'] = df.apply(lambda row: replace_words_v2(row['Product description'], row), axis=1)
-        excel_file = create_excel_file(df)
-        all_files.append((f"{file.name}", excel_file))
-
+        description_column = find_correct_column(df, 'Product description')
+        if description_column:
+            df['Product description updated'] = df.apply(lambda row: replace_words_v2(row[description_column], row), axis=1)
+            excel_file = create_excel_file(df)
+            all_files.append((f"{file.name}", excel_file))
+        else:
+            st.error(f'Could not find column "Product description" in file {file.name}')
     # If only one file is processed
     if len(all_files) == 1:
         file_name, file_data = all_files[0]
