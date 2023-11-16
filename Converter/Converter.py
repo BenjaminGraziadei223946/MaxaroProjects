@@ -24,12 +24,11 @@ def replace_words_v2(description, row):
         return description
     
     for header in df.columns:
-        headHolder = f'[{header}]'
-        if headHolder.lower() in description.lower():
+        if header.lower() in description.lower():
             value = row[header]
             if pd.isna(value):  # Als de waarde NaN is, sla deze kolom over
                 continue
-            description = description.replace(headHolder, str(value))
+            description = description.replace(f'[{header}]', str(value))
     return description
 
 all_files = []
