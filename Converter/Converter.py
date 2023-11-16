@@ -24,7 +24,7 @@ def replace_words_v2(description, row):
         return description
     
     for header in df.columns:
-        st.write(header)
+        st.write(description)
         st.write(row)
         if header in description:
             value = row[header]
