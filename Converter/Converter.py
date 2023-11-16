@@ -24,11 +24,8 @@ def replace_words_v2(description, row):
         return description
     
     for header in df.columns:
-        low = header.lower()
-        st.write(f'{row[header]}')
         if header in description:
             value = row[header]
-            
             if pd.isna(value):  # Als de waarde NaN is, sla deze kolom over
                 continue
             description = description.replace(f'[{header}]', str(value))
