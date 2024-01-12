@@ -25,7 +25,9 @@ openai.api_base = os.environ.get('api_base')
 openai.api_key = os.environ.get('api_key')
 
 
+tries = 0
 def generate_description(url, soup):
+    global tries
     global df_prodDes
     product_title = soup.find('h1', class_='product-header__title').get_text().strip()
     if product_title:
@@ -49,10 +51,13 @@ def generate_description(url, soup):
             )
             new_row = {'Product': product_title, 'Description': response['choices'][0]['message']['content'], 'URL': url}
             df_prodDes.loc[len(df_prodDes)] = new_row
-        else:
+            tries = 0
+        elif tries < 3:
+            tries += 1
             time.sleep(3)
             generate_description(url, soup)
-    else:
+    elif tries < 3:
+        tries += 1
         time.sleep(3)
         generate_description(url, soup)
     return None
