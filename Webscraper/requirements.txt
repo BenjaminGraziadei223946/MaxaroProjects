@@ -1,8 +1,8 @@
 requests
-BeautifulSoup
+bs4
 time
 pandas
 openai
 streamlit
-BytesIO
+io
 os
