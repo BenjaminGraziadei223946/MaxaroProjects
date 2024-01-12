@@ -1,0 +1,8 @@
+requests
+BeautifulSoup
+time
+pandas
+openai
+streamlit
+BytesIO
+os
