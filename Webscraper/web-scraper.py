@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import pandas as pd
-from openai import OpenAI
+from openai import AzureOpenAI
 import streamlit as st
 from io import BytesIO
 import os
@@ -21,7 +21,7 @@ if 'count_found' not in st.session_state:
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
-client = OpenAI(
+client = AzureOpenAI(
     api_key = st.secrets['api_key'],
     api_version = "2023-07-01-preview",
     azure_endpoint = st.secrets['azure_endpoint']
