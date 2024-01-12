@@ -134,6 +134,7 @@ def get_product_links(url, max_attempts=3, delay=3):                            
                     try:
                         link = product.find('a')['href']
                         st.session_state['count_searched'] += 1
+                        st.write(link)
                         searched_placeholder.write(f'Searched: {st.session_state["count_searched"]}')
                         check_product_descriptions(main_page + link)
                     except TypeError as e:
