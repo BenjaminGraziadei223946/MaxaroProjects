@@ -1,49 +1,81 @@
 import requests
 from bs4 import BeautifulSoup
+import time
+import pandas as pd
 import openai
 import streamlit as st
-import json
-import time
-
+from io import BytesIO
 
 st.title("Product Text Generator")
 
+found_placeholder = st.empty()
+searched_placeholder = st.empty()
+
+if 'count_searched' not in st.session_state:
+    st.session_state['count_searched'] = 0
+
+if 'count_found' not in st.session_state:
+    st.session_state['count_found'] = 0
+
 main_page = "https://www.maxaro.nl"
+df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
+
+
 openai.api_type = "azure"
-openai.api_key = "54a267e072934050a8df635e4f6da7b5"
 openai.api_base = "https://maxbotai.openai.azure.com/"
-openai.api_version = "2023-09-15-preview"
-counter = st.empty()
-type = st.empty()
-list_of_links = []
+openai.api_version = "2023-07-01-preview"
+openai.api_key = "54a267e072934050a8df635e4f6da7b5"
 
-def generate_description(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Parsing the content of the webpage
-        soup = BeautifulSoup(response.content, 'html.parser')
 
-        product_title = soup.find('h1', class_='product-header__title').get_text().strip()
+def generate_description(url, soup):
+    global df_prodDes
+    product_title = soup.find('h1', class_='product-header__title').get_text().strip()
+    if product_title:
 
         specifications_container = soup.find('div', id="specifications")
-        specs = specifications_container.find('div', class_="product-detail-specifications").get_text().strip()
+        specs = specifications_container.find('div', class_="product-detail-specifications").get_text().strip() if specifications_container else st.write(f"Specifications not found for {product_title}")
 
 
         benefits_container = soup.find('div', id="benefits")
-        benefits = benefits_container.find('div', class_="product-detail-section__content").get_text().strip() if benefits_container else "Benefits not found"
+        benefits = benefits_container.find('div', class_="product-detail-section__content").get_text().strip() if benefits_container else st.write(f"Benefits not found for {product_title}")
         
-        text = f"{product_title}: {specs}. {benefits}"
+        if specs or benefits:
+            text = f"{product_title}: {specs}. {benefits}"
 
-        response = openai.ChatCompletion.create(
-            engine="gpt-35-turbo",
-            messages=[
-                {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden."},
-                {"role": "user", "content": f"{text}"}
-            ]
-        )
-        st.write(response['choices'][0]['message']['content'])
+            response = openai.ChatCompletion.create(
+                engine="gpt-35-turbo",
+                messages=[
+                    {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden."},
+                    {"role": "user", "content": f"{text}"}
+                ]
+            )
+            new_row = {'Product': product_title, 'Description': response['choices'][0]['message']['content'], 'URL': url}
+            df_prodDes.loc[len(df_prodDes)] = new_row
+        else:
+            time.sleep(3)
+            generate_description(url, soup)
     else:
-        print(f"Error accessing the webpage: Status code {response.status_code}")
+        time.sleep(3)
+        generate_description(url, soup)
+    return None
+
+def check_product_descriptions(url):
+    url = url.strip()  # Remove any leading/trailing whitespace
+    response = requests.get(url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        p_tag = soup.find('p', string='Productomschrijving')
+
+        if not p_tag:
+            st.session_state['count_found'] += 1
+            found_placeholder.write(f'Found: {st.session_state["count_found"]}')
+            generate_description(url, soup)
+    else:
+        time.sleep(3)
+        check_product_descriptions(url)
+
+    return None
 
 def is_button_disabled(button):
     if button.get('disabled'):
@@ -87,44 +119,90 @@ def get_product_links(url, max_attempts=3, delay=3):                            
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 product_container = soup.find_all('div', class_='column is-6-mobile is-4-tablet')                   # Find all the products on the page
-                if product_container:
-                    list_of_links.extend([product.find('a')['href'] for product in product_container if product.find('a')]) # Add the links to the list
-                        
-                    next_page_span = soup.find('span', class_='pagination__button-text', text='Volgende')           # Find the next page button text
-                    next_page_button =  next_page_span.find_parent('a') if next_page_span else None                 # Find the next page button parent
-                    if next_page_button and not is_button_disabled(next_page_button):                               # Check if the button is disabled and if not, get the link
-                        url = main_page + next_page_button['href']                                                  # Update the url          
-                        type.write(url)
-                    else:                                                                                           # If the button is disabled, break the loop                        
-                        break
+
+                next_page_span = soup.find('span', class_='pagination__button-text', string='Volgende')           # Find the next page button text
+                next_page_button =  next_page_span.find_parent('a') if next_page_span else None   
+                if len(product_container) != 24:
+                                  # Find the next page button parent
+                    if next_page_button and not is_button_disabled(next_page_button):
+                        continue
+                for product in product_container:
+                    try:
+                        link = product.find('a')['href']
+                        st.session_state['count_searched'] += 1
+                        searched_placeholder.write(f'Searched: {st.session_state["count_searched"]}')
+                        check_product_descriptions(main_page + link)
+                    except TypeError as e:
+                        print('No link found',e , product)
+                    
+                if next_page_button and not is_button_disabled(next_page_button):                               # Check if the button is disabled and if not, get the link
+                    url = main_page + next_page_button['href']                                                  # Update the url          
+                else:                                                                                           # If the button is disabled, break the loop                        
+                    break
 
             time.sleep(delay)
     return None
 
 def get_links(main_page):
+    def format(link):
+        return link.split('/')[-2]
+
+    if 'selected_categories' not in st.session_state:
+        st.session_state['selected_categories'] = []
+
+    if 'subcategories' not in st.session_state:
+        st.session_state['subcategories'] = {}
 
     categories = get_category_links(main_page)
+    formatted_categories = [format(x) for x in categories]
 
-    for category in categories:
-        category_url = main_page + category
-        subcategories = get_sub_links(category_url)
+    selected_categories = st.multiselect('Select Categories', formatted_categories, key='cat_select')
 
+    if selected_categories != st.session_state['selected_categories']:
+        # New selection made, reset subcategories
+        st.session_state['subcategories'] = {}
+        st.session_state['selected_categories'] = selected_categories
+
+    for category in selected_categories:
+        if category not in st.session_state['subcategories']:
+            category_url = main_page + '/' + category
+            st.session_state['subcategories'][category] = get_sub_links(category_url)
+
+    urls = []
+    for category in selected_categories:
+        subcategories = st.session_state['subcategories'].get(category, [])
+        
         if subcategories:
-            for sub_link in subcategories:
-                sub_url = main_page + sub_link
-                get_product_links(sub_url)
+            formatted_subcategories = [format(x) for x in subcategories]
+            selected_subcategories = st.multiselect(f'Select Subcategories for {category}', formatted_subcategories, default=formatted_subcategories, key=f'sub_select_{category}')
 
+            for sub_link in selected_subcategories:
+                sub_url = main_page + '/' + category + '/' + sub_link
+                urls.append(sub_url)
         else:
-            get_product_links(category_url)
+            category_url = main_page + '/' + category
+            urls.append(category_url)
+
+    if st.button("Start", key='start'):
+        for url in urls:    
+            get_product_links(url)
+
 
     return None
 
-get_links(main_page)
-url = st.selectbox("Select a product", list_of_links)
-if st.button("Generate"):
-    #generate_description(url)
-    st.write(list_of_links)
-    with open('links.json', 'w') as file:
-        json.dump(list_of_links, file)
 
-    
+get_links(main_page)
+#check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
+
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
+
+if not df_prodDes.empty:
+    df_xlsx = to_excel(df_prodDes)
+    st.download_button(label='Download Excel file',
+                    data=df_xlsx ,
+                    file_name='product_descriptions.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
