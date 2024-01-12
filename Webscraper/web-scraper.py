@@ -117,35 +117,34 @@ def get_sub_links(url, max_attempts=3, delay=3):                                
     return None
 
 def get_product_links(url, max_attempts=3, delay=3):                                                                 # Get the links of the products on given page
-    for attempt in range(max_attempts):
-        while True:                                                                                                 # Loop as long as there are more pages
-            response = requests.get(url)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                product_container = soup.find_all('div', class_='column is-6-mobile is-4-tablet')                   # Find all the products on the page
+    for attempt in range(max_attempts):                                                                                 # Loop as long as there are more pages
+        response = requests.get(url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            product_container = soup.find_all('div', class_='column is-6-mobile is-4-tablet')                   # Find all the products on the page
 
-                next_page_span = soup.find('span', class_='pagination__button-text', string='Volgende')           # Find the next page button text
-                next_page_button =  next_page_span.find_parent('a') if next_page_span else None   
-                if len(product_container) != 24:
-                                  # Find the next page button parent
-                    if next_page_button and not is_button_disabled(next_page_button):
-                        continue
-                for product in product_container:
-                    try:
-                        link = product.find('a')['href']
-                        st.session_state['count_searched'] += 1
-                        st.write(link)
-                        searched_placeholder.write(f'Searched: {st.session_state["count_searched"]}')
-                        check_product_descriptions(main_page + link)
-                    except TypeError as e:
-                        print('No link found',e , product)
-                    
-                if next_page_button and not is_button_disabled(next_page_button):                               # Check if the button is disabled and if not, get the link
-                    url = main_page + next_page_button['href']                                                  # Update the url          
-                else:                                                                                           # If the button is disabled, break the loop                        
-                    break
+            next_page_span = soup.find('span', class_='pagination__button-text', string='Volgende')           # Find the next page button text
+            next_page_button =  next_page_span.find_parent('a') if next_page_span else None   
+            if len(product_container) != 24:
+                                # Find the next page button parent
+                if next_page_button and not is_button_disabled(next_page_button):
+                    continue
+            for product in product_container:
+                try:
+                    link = product.find('a')['href']
+                    st.session_state['count_searched'] += 1
+                    st.write(link)
+                    searched_placeholder.write(f'Searched: {st.session_state["count_searched"]}')
+                    check_product_descriptions(main_page + link)
+                except TypeError as e:
+                    print('No link found',e , product)
+                
+            if next_page_button and not is_button_disabled(next_page_button):                               # Check if the button is disabled and if not, get the link
+                url = main_page + next_page_button['href']                                                  # Update the url          
+            else:                                                                                           # If the button is disabled, break the loop                        
+                break
 
-            time.sleep(delay)
+        time.sleep(delay)
     return None
 
 def get_links(main_page):
