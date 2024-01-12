@@ -43,7 +43,7 @@ def generate_description(url, soup):
             text = f"{product_title}: {specs}. {benefits}"
 
             response = openai.Completion.create(
-                engine="gpt-35-turbo",
+                model="gpt-35-turbo",
                 prompt = f'Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. {text}',
             )
             new_row = {'Product': product_title, 'Description': response.choices[0].text, 'URL': url}
@@ -191,8 +191,8 @@ def get_links(main_page):
     return None
 
 
-get_links(main_page)
-#check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
+#get_links(main_page)
+check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
 
 def to_excel(df):
     output = BytesIO()
