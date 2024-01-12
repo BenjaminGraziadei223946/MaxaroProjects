@@ -1,5 +1,5 @@
 requests
 bs4
 pandas
-openai == 0.28.0
+openai
 streamlit
