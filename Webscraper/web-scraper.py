@@ -47,7 +47,7 @@ def generate_description(url, soup):
             response = client.chat.completions.create(
                 model="gpt-35-turbo",
                 messages = [
-                    {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden."},
+                    {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. Verder moet de tekst seo-geoptimaliseerd zijn, dus kijk uit naar: Schrijf voor kopers, niet voor bots; Leg de nadruk op voordelen, voeg functies toe; Richt je op de juiste SEO-productzoekwoorden; Plaats zoekwoorden strategisch in je tekst; Laat de lengte afhangen van het bewustzijn van de koper; Maak een duidelijke oproep tot actie; Maak unieke productbeschrijvingen voor elk PDP"},
                     {"role": "user", "content": f"Dit is het product waarvoor we een beschrijving nodig hebben: {text}"},
                 ])
             new_row = {'Product': product_title, 'Description': response.choices[0].message.content, 'URL': url}
