@@ -5,6 +5,7 @@ import pandas as pd
 import openai
 import streamlit as st
 from io import BytesIO
+import os
 
 st.title("Product Text Generator")
 
@@ -20,11 +21,10 @@ if 'count_found' not in st.session_state:
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
-
-openai.api_type = "azure"
-openai.api_base = "https://maxbotai.openai.azure.com/"
-openai.api_version = "2023-07-01-preview"
-openai.api_key = "54a267e072934050a8df635e4f6da7b5"
+openai.api_type = os.environ.get('api_type')
+openai.api_base = os.environ.get('api_base')
+openai.api_version = os.environ.get('api_version')
+openai.api_key = os.environ.get('api_key')
 
 
 def generate_description(url, soup):
