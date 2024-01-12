@@ -23,7 +23,7 @@ df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
 client = AzureOpenAI(
     api_key = st.secrets['api_key'],
-    api_version = "2023-07-01-preview",
+    api_version = "2023-05-15",
     azure_endpoint = st.secrets['azure_endpoint']
     )
 
@@ -44,11 +44,13 @@ def generate_description(url, soup):
         if specs or benefits:
             text = f"{product_title}: {specs}. {benefits}"
 
-            response = client.completions.create(
-                model="gpt-3.5-turbo",
-                prompt = f"Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. {text}"
-            )
-            new_row = {'Product': product_title, 'Description': response.choices[0].text, 'URL': url}
+            response = client.chat.completions.create(
+                model="gpt-35-turbo",
+                messages = [
+                    {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden."},
+                    {"role": "user", "content": f"Dit is het product waarvoor we een beschrijving nodig hebben: {text}"},
+                ])
+            new_row = {'Product': product_title, 'Description': response.choices[0].message.content, 'URL': url}
             df_prodDes.loc[len(df_prodDes)] = new_row
             tries = 0
         elif tries < 3:
