@@ -21,7 +21,11 @@ if 'count_found' not in st.session_state:
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
-client = OpenAI(api_key = st.secrets['api_key'])
+client = OpenAI(
+    api_key = st.secrets['api_key'],
+    api_version = "2023-07-01-preview",
+    azure_endpoint = st.secrets['azure_endpoint']
+    )
 
 tries = 0
 def generate_description(url, soup):
