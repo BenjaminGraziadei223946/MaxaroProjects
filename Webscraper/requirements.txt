@@ -3,5 +3,4 @@ bs4
 pandas
 openai
 streamlit
-io
 os
