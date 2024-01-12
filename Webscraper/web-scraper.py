@@ -42,14 +42,11 @@ def generate_description(url, soup):
         if specs or benefits:
             text = f"{product_title}: {specs}. {benefits}"
 
-            response = openai.ChatCompletion.create(
+            response = openai.Completion.create(
                 engine="gpt-35-turbo",
-                messages=[
-                    {"role": "system", "content": "Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden."},
-                    {"role": "user", "content": f"{text}"}
-                ]
+                prompt = f'Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. {text}',
             )
-            new_row = {'Product': product_title, 'Description': response['choices'][0]['message']['content'], 'URL': url}
+            new_row = {'Product': product_title, 'Description': response.choices[0].text, 'URL': url}
             df_prodDes.loc[len(df_prodDes)] = new_row
             tries = 0
         elif tries < 3:
