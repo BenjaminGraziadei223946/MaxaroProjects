@@ -21,8 +21,8 @@ if 'count_found' not in st.session_state:
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
-openai.api_base = os.environ.get('api_base')
-openai.api_key = os.environ.get('api_key')
+openai.api_base = st.secrets['api_base']
+openai.api_key = st.secrets['api_key']
 
 
 tries = 0
