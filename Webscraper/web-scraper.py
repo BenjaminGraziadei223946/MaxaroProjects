@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import pandas as pd
-import openai
+from openai import OpenAI
 import streamlit as st
 from io import BytesIO
 import os
@@ -21,9 +21,10 @@ if 'count_found' not in st.session_state:
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
-openai.api_base = st.secrets['api_base']
-openai.api_key = st.secrets['api_key']
-
+client = OpenAI(
+    api_base = st.secrets['api_base'],
+    api_key = st.secrets['api_key']
+)
 
 tries = 0
 def generate_description(url, soup):
@@ -42,10 +43,9 @@ def generate_description(url, soup):
         if specs or benefits:
             text = f"{product_title}: {specs}. {benefits}"
 
-            response = openai.Completion.create(
+            response = client.completions.create(
                 model="gpt-35-turbo",
-                prompt = f"Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. {text}",
-                max_tokens=150
+                prompt = f"Maak een overtuigende en positieve productbeschrijving voor het volgende artikel. Benadruk de belangrijkste kenmerken, voordelen en onderscheidende kenmerken. Gebruik duidelijke en begrijpelijke taal om de lezer te boeien. Stel je voor dat je tegen een potentiële klant spreekt die op zoek is naar de beste kwaliteiten van het product. Maak de beschrijving ongeveer 150-200 woorden. {text}"
             )
             new_row = {'Product': product_title, 'Description': response.choices[0].text, 'URL': url}
             df_prodDes.loc[len(df_prodDes)] = new_row
