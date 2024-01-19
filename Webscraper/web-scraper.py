@@ -181,10 +181,10 @@ def get_links(main_page):
 
             for sub_link in selected_subcategories:
                 sub_url = main_page + '/' + category + '/' + sub_link
-                urls.append(sub_url)
+                generate_description(sub_url)
         else:
             category_url = main_page + '/' + category
-            urls.append(category_url)
+            generate_description(category_url)
 
     if st.button("Start", key='start'):
         for url in urls:    
