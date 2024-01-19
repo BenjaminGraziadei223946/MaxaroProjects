@@ -6,6 +6,8 @@ from openai import AzureOpenAI
 import streamlit as st
 from io import BytesIO
 import os
+import asyncio
+import aiohttp
 
 st.title("Product Text Generator")
 
@@ -20,6 +22,7 @@ if 'count_found' not in st.session_state:
 
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
+all_links = []
 
 client = AzureOpenAI(
     api_key = st.secrets['api_key'],
@@ -28,6 +31,17 @@ client = AzureOpenAI(
     )
 
 tries = 0
+
+async def fetch_and_process(session, url):
+    async with session.get(url) as response:
+        if response.status == 200:
+            html_content = await response.text()
+            soup = BeautifulSoup(html_content, 'html.parser')
+            generate_description(url, soup)  # Synchronous call
+        else:
+            print(f"Failed to fetch {url}")
+
+
 def generate_description(url, soup):
     global tries
     global df_prodDes
@@ -55,11 +69,11 @@ def generate_description(url, soup):
             tries = 0
         elif tries < 3:
             tries += 1
-            time.sleep(3)
+            time.sleep(2)
             generate_description(url, soup)
     elif tries < 3:
         tries += 1
-        time.sleep(3)
+        time.sleep(2)
         generate_description(url, soup)
     return None
 
@@ -74,9 +88,9 @@ def check_product_descriptions(url):
         if not p_tag:
             st.session_state['count_found'] += 1
             found_placeholder.write(f'Found: {st.session_state["count_found"]}')
-            generate_description(url, soup)
+            all_links.append(url)
     else:
-        time.sleep(3)
+        time.sleep(2)
         check_product_descriptions(url)
 
     return None
@@ -88,7 +102,7 @@ def is_button_disabled(button):
         return True
     return False
 
-def get_category_links(url, max_attempts=3, delay=3):                                                               # Get the links of the categories on Mainpage
+def get_category_links(url, max_attempts=3, delay=2):                                                               # Get the links of the categories on Mainpage
     for attempt in range(max_attempts):
         response = requests.get(url)
         if response.status_code == 200:
@@ -101,7 +115,7 @@ def get_category_links(url, max_attempts=3, delay=3):                           
         time.sleep(delay)
     return None
 
-def get_sub_links(url, max_attempts=3, delay=3):                                                                   # Get the links of the subcategories inside the categories           
+def get_sub_links(url, max_attempts=3, delay=2):                                                                   # Get the links of the subcategories inside the categories           
     for attempt in range(max_attempts):
         response = requests.get(url)
         if response.status_code == 200:
@@ -116,7 +130,7 @@ def get_sub_links(url, max_attempts=3, delay=3):                                
         time.sleep(delay)
     return None
 
-def get_product_links(url, max_attempts=3, delay=3):                                                                 # Get the links of the products on given page
+def get_product_links(url, max_attempts=3, delay=2):                                                                 # Get the links of the products on given page
     for attempt in range(max_attempts):                                                                                 # Loop as long as there are more pages
         response = requests.get(url)
         if response.status_code == 200:
@@ -189,6 +203,7 @@ def get_links(main_page):
     if st.button("Start", key='start'):
         for url in urls:    
             get_product_links(url)
+        
 
 
     return None
@@ -196,6 +211,11 @@ def get_links(main_page):
 
 get_links(main_page)
 #check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
+
+async def process_all_urls(urls):
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_and_process(session, url) for url in urls]
+        await asyncio.gather(*tasks)
 
 def to_excel(df):
     output = BytesIO()
