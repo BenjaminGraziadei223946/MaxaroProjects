@@ -55,11 +55,11 @@ def generate_description(url, soup):
             tries = 0
         elif tries < 3:
             tries += 1
-            time.sleep(2)
+            time.sleep(3)
             generate_description(url, soup)
     elif tries < 3:
         tries += 1
-        time.sleep(2)
+        time.sleep(3)
         generate_description(url, soup)
     return None
 
@@ -76,7 +76,7 @@ def check_product_descriptions(url):
             found_placeholder.write(f'Found: {st.session_state["count_found"]}')
             generate_description(url, soup)
     else:
-        time.sleep(2)
+        time.sleep(3)
         check_product_descriptions(url)
 
     return None
@@ -181,7 +181,7 @@ def get_links(main_page):
 
             for sub_link in selected_subcategories:
                 sub_url = main_page + '/' + category + '/' + sub_link
-                generate_description(sub_url)
+                urls.append(sub_url)
         else:
             category_url = main_page + '/' + category
             urls.append(category_url)
