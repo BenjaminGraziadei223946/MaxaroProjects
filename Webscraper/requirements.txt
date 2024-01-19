@@ -4,3 +4,5 @@ pandas
 openai
 streamlit
 openpyxl
+asyncio
+aiohttp
