@@ -184,7 +184,7 @@ def get_links(main_page):
                 generate_description(sub_url)
         else:
             category_url = main_page + '/' + category
-            generate_description(category_url)
+            urls.append(category_url)
 
     if st.button("Start", key='start'):
         for url in urls:    
