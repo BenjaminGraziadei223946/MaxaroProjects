@@ -6,8 +6,6 @@ from openai import AzureOpenAI
 import streamlit as st
 from io import BytesIO
 import os
-import asyncio
-import aiohttp
 
 st.title("Product Text Generator")
 
@@ -22,7 +20,6 @@ if 'count_found' not in st.session_state:
 
 main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
-all_links = []
 
 client = AzureOpenAI(
     api_key = st.secrets['api_key'],
@@ -31,17 +28,6 @@ client = AzureOpenAI(
     )
 
 tries = 0
-
-async def fetch_and_process(session, url):
-    async with session.get(url) as response:
-        if response.status == 200:
-            html_content = await response.text()
-            soup = BeautifulSoup(html_content, 'html.parser')
-            generate_description(url, soup)  # Synchronous call
-        else:
-            print(f"Failed to fetch {url}")
-
-
 def generate_description(url, soup):
     global tries
     global df_prodDes
@@ -88,7 +74,7 @@ def check_product_descriptions(url):
         if not p_tag:
             st.session_state['count_found'] += 1
             found_placeholder.write(f'Found: {st.session_state["count_found"]}')
-            all_links.append(url)
+            generate_description(url, soup)
     else:
         time.sleep(2)
         check_product_descriptions(url)
@@ -203,7 +189,6 @@ def get_links(main_page):
     if st.button("Start", key='start'):
         for url in urls:    
             get_product_links(url)
-        
 
 
     return None
@@ -211,11 +196,6 @@ def get_links(main_page):
 
 get_links(main_page)
 #check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
-
-async def process_all_urls(urls):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_and_process(session, url) for url in urls]
-        await asyncio.gather(*tasks)
 
 def to_excel(df):
     output = BytesIO()
