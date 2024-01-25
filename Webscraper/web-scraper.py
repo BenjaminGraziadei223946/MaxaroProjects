@@ -212,6 +212,7 @@ def get_links(main_page):
 #get_links(main_page)
 #check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
 generate_description('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
+st.write(df_prodDes)
 
 def to_excel(df):
     output = BytesIO()
