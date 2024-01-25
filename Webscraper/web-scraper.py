@@ -42,22 +42,7 @@ def generate_description(url, soup):
         benefits = benefits_container.find('div', class_="product-detail-section__content").get_text().strip() if benefits_container else st.write(f"Benefits not found for {product_title}")
         
         if specs or benefits:
-            text = f"ProductId	ArticleNumber	Name	Property	Value
-6839	DRPLG002	Radiator knop thermostatisch chroom	Product_Radiatorkranen_BidFactorCPC	1.2
-6839	DRPLG002	Radiator knop thermostatisch chroom	Product_Radiatorkranen_BidFactorCPC	1.2
-6839	DRPLG002	Radiator knop thermostatisch chroom	Product_Radiatorkranen_Label	Standaard
-6839	DRPLG002	Radiator knop thermostatisch chroom	Product_Radiatorkranen_Label	Standaard
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Bediening	Thermostatisch
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Kinderslot	False
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Kinderslot	False
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Kleur	Grijs
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Kleurnaam	Chroom
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Lengte	8.5 cm
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Lengte	8.5 cm
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Materiaal	Aluminium
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Materiaal	Kunststof
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_NumberOfItems	1
-6839	DRPLG002	Radiator knop thermostatisch chroom	Radiatorkranen_Afwerkingsmethode	Verchroomd"
+            text = f"{product_title}: {specs}. {benefits}"
 
             response = client.chat.completions.create(
                 model="gpt-35-turbo",
@@ -209,10 +194,8 @@ def get_links(main_page):
     return None
 
 
-#get_links(main_page)
+get_links(main_page)
 #check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
-generate_description('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
-st.write(df_prodDes)
 
 def to_excel(df):
     output = BytesIO()
