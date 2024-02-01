@@ -53,6 +53,10 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-function.outputs.webapp-url }}
+    
+    env:
+      AZURE_API_KEY: ${{ secrets.AZURE_API_KEY }}
+      # ... other environment variables
 
     steps:
       - name: Download artifact from build job
@@ -73,3 +77,4 @@ jobs:
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_1674FA1825DD4B0B8856A5F10353E69E }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
+          
