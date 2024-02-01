@@ -6,6 +6,8 @@ from openai import AzureOpenAI
 import streamlit as st
 from io import BytesIO
 import os
+from dotenv import load_dotenv
+load_dotenv(dotenv_path='../secrets.env')
 
 st.title("Product Text Generator")
 
@@ -22,9 +24,9 @@ main_page = "https://www.maxaro.nl"
 df_prodDes = pd.DataFrame(columns=['Product', 'Description', 'URL'])
 
 client = AzureOpenAI(
-    api_key = st.secrets['api_key'],
-    api_version = "2023-05-15",
-    azure_endpoint = st.secrets['azure_endpoint']
+    api_key = os.environ.get('AZURE_OPENAI_KEY'),
+    api_version = os.environ.get('AZURE_API_VERSION'),
+    azure_endpoint = os.environ.get('AZURE_ENDPOINT')
     )
 
 tries = 0
@@ -195,7 +197,6 @@ def get_links(main_page):
 
 
 get_links(main_page)
-#check_product_descriptions('https://www.maxaro.nl/douches/douchecabines/diamond-douchecabine-90x90-cm-mat-zwart-helder-glas-draaideur-vierkant-154119/')
 
 def to_excel(df):
     output = BytesIO()
