@@ -23,54 +23,32 @@ from panda3d.core import Point3, LineSegs
 from direct.interval.LerpInterval import LerpFunc, LerpPosInterval
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.DirectGui import DirectCheckButton
+from enum import Enum
 from math import sin, pi
 
 loadPrcFile('settings.prc')
+class Config:
+    ROOM_CORNERS = {
+        'tl': LVector3(-20, 20, 11),
+        'tr': LVector3(20, 20, 11),
+        'bl': LVector3(-20, -20, 11),
+        'br': LVector3(20, -20, 11),
+        '_tl': LVector3(-20, 20, -11),
+        '_tr': LVector3(20, 20, -11),
+        '_bl': LVector3(-20, -20, -11),
+        '_br': LVector3(20, -20, -11)
+    }
+
+class CameraState(Enum):
+    SIDE = 0
+    BIRD_EYE = 1
 
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        if not hasattr(self, 'init_complete'):
-            self.bird_eye = True
-            self.transitionBlock = False
+        self.transitionBlock = False
         
-        def cameraTransitionUp(t):
-            self.transitionBlock = True
-            rotation = 90*sin(pi * t/2)  # Adjust as necessary
-            self.pivot.setP(rotation)
-        # Define the downward transition function
-        def cameraTransitionDown(t):
-            self.transitionBlock = True
-            rotation = 90*sin(pi * (1 - t/2))  # Adjust as necessary
-            self.pivot.setP(rotation)
-        self.transitionUp = LerpFunc(
-            cameraTransitionUp,
-            fromData=1,
-            toData=0,
-            duration=1.5  # Duration in seconds
-        )
-        self.transitionDown = LerpFunc(
-            cameraTransitionDown,
-            fromData=0,
-            toData=1,
-            duration=1.5  # Duration in seconds
-        )
-
-        self.toggleButton = DirectCheckButton(
-            text="Toggle Builder Mode",
-            scale=0.1,
-            pos=(.5, 1.5, 0.5),
-            indicatorValue = 1,
-            command=self.toggleBM
-        )
-
-        self.gridButton = DirectCheckButton(
-            text="Toggle Grid",
-            scale=0.1,
-            pos=(-.5, 3.5, .5),
-            indicatorValue = 1,
-            command=self.toggleGrid
-        )
+        self.init_Buttons_and_Interfaces()
         
                     
         self.init()
@@ -101,30 +79,60 @@ class MyApp(ShowBase):
         
     def init(self):
         self.disableMouse()
-        self.state = 1                      # 0 = 3rd person, 1 = bird eye
+        self.state = CameraState.BIRD_EYE
         self.lastMouseX = None
         self.orbit = 90                     # Camera orbit
-        self.tl = LVector3(-20, 20, 11)     # up, _ = down
-        self.tr = LVector3(20, 20, 11)
-        self.bl = LVector3(-20, -20, 11)
-        self.br = LVector3(20, -20, 11)
-        self._bl = LVector3(-20, -20, -11)
-        self._br = LVector3(20, -20, -11)
-        self._tl = LVector3(-20, 20, -11)
-        self._tr = LVector3(20, 20, -11)
-
-        self.tlc = LVector3(-20, 20, 11)     # up, _ = down
-        self.trc = LVector3(20, 20, 11)
-        self.blc = LVector3(-20, -20, 11)
-        self.brc = LVector3(20, -20, 11)
-        self._blc = LVector3(-20, -20, -11)
-        self._brc = LVector3(20, -20, -11)
-        self._tlc = LVector3(-20, 20, -11)
-        self._trc = LVector3(20, 20, -11)
+        self.tl = Config.ROOM_CORNERS['tl']    # up, _ = down
+        self.tr = Config.ROOM_CORNERS['tr']
+        self.bl = Config.ROOM_CORNERS['bl']
+        self.br = Config.ROOM_CORNERS['br']
+        self._bl = Config.ROOM_CORNERS['_bl']
+        self._br = Config.ROOM_CORNERS['_br']
+        self._tl = Config.ROOM_CORNERS['_tl']
+        self._tr = Config.ROOM_CORNERS['_tr']
         
         self.sides = [[self.bl, self.tl], [self.tl, self.tr], [self.br, self.tr], [self.br,self.bl]]
         self.stopPos = False
+    
+    def init_Buttons_and_Interfaces(self):
+        def cameraTransitionUp(t):
+            self.transitionBlock = True
+            rotation = 90*sin(pi * t/2)  # Adjust as necessary
+            self.pivot.setP(rotation)
+        # Define the downward transition function
+        def cameraTransitionDown(t):
+            self.transitionBlock = True
+            rotation = 90*sin(pi * (1 - t/2))  # Adjust as necessary
+            self.pivot.setP(rotation)
         
+        self.transitionUp = LerpFunc(
+            cameraTransitionUp,
+            fromData=1,
+            toData=0,
+            duration=1.5  # Duration in seconds
+        )
+        self.transitionDown = LerpFunc(
+            cameraTransitionDown,
+            fromData=0,
+            toData=1,
+            duration=1.5  # Duration in seconds
+        )
+
+        self.toggleButton = DirectCheckButton(
+            text="Toggle Builder Mode",
+            scale=0.1,
+            pos=(.5, 1.5, 0.5),
+            indicatorValue = 1,
+            command=self.toggleBM
+        )
+
+        self.gridButton = DirectCheckButton(
+            text="Toggle Grid",
+            scale=0.1,
+            pos=(-.5, 3.5, .5),
+            indicatorValue = 1,
+            command=self.toggleGrid
+        )
 
     def control(self):
         self.pivot = self.render.attachNewNode("Pivot")
@@ -332,19 +340,18 @@ class MyApp(ShowBase):
         return round(x / grid) * grid
 
     def toggleTransition(self):
-        if self.state == 0 and not self.transitionBlock:
+        if self.state == CameraState.SIDE and not self.transitionBlock:
             self.transitionUp.start()
-            self.state = 1
-        elif self.state == 1 and not self.transitionBlock:
+            
+        elif self.state == CameraState.BIRD_EYE and not self.transitionBlock:
             self.transitionDown.start()
-            self.state = 0
-
+            self.state = CameraState.SIDE
+            
     def onTransitionUpCompleted(self):
-        self.bird_eye = True
         self.transitionBlock = False
+        self.state = CameraState.BIRD_EYE
 
     def onTransitionDownCompleted(self):
-        self.bird_eye = False
         self.transitionBlock = False
 
     def set_lights(self):
@@ -433,7 +440,7 @@ class MyApp(ShowBase):
             elif y < self.bl.getY():
                 y = self.bl.getY()
             return x,y
-        if self.bird_eye:
+        if self.state == CameraState.BIRD_EYE:
 
             if self.BMode:
                 self.dNodePath1.show()
