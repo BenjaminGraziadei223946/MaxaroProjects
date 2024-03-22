@@ -11,6 +11,7 @@ from panda3d.core import TextNode, CollisionBox, Point3
 from panda3d.core import LPoint3, LVector3, BitMask32, VBase4
 from direct.gui.OnscreenText import OnscreenText, TextNode
 from direct.showbase.DirectObject import DirectObject
+from panda3d.core import Texture
 from direct.task.Task import Task
 import numpy as np
 import sys
@@ -23,10 +24,11 @@ from panda3d.core import Point3, LineSegs
 from direct.interval.LerpInterval import LerpFunc, LerpPosInterval
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.DirectGui import DirectCheckButton
+from direct.gui.DirectGui import *
 from enum import Enum
 from math import sin, pi
 
-loadPrcFile('settings.prc')
+loadPrcFile('settings.prc')                             # Stand der dinge: limit mouse movement in der limit() function fir net rechte winkel
 class Config:
     ROOM_CORNERS = {
         'tl': LVector3(-20, 20, 11),
@@ -46,13 +48,10 @@ class CameraState(Enum):
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        self.transitionBlock = False
         
         self.init_Buttons_and_Interfaces()
         
-                    
         self.init()
-        self.variables()
         self.collision_setup()
         self.createRoom()
         self.control()
@@ -61,10 +60,8 @@ class MyApp(ShowBase):
         self.add_instructions()
 
         self.accept('q', self.startWebcam)
-
         self.accept("r", self.start_rotation)
         self.accept("r-up", self.stop_rotation)
-
         self.accept("e", self.rotation)
 
         self.transitionUp.setDoneEvent("transitionUpCompleted")
@@ -93,6 +90,41 @@ class MyApp(ShowBase):
         
         self.sides = [[self.bl, self.tl], [self.tl, self.tr], [self.br, self.tr], [self.br,self.bl]]
         self.stopPos = False
+        self.tubsphPaths = []
+
+        self.dragbl = False
+        self.dragtl = False
+        self.dragbr = False
+        self.dragtr = False
+        self.draglw = False
+        self.dragtw = False
+        self.dragrw = False
+        self.dragbw = False
+
+        self.dragging = False
+        self.collision_node = False
+        self.mouseTask = taskMgr.add(self.mouseTask, 'mouseTask')
+        self.accept('mouse1', self.grabItem)
+        self.accept('mouse1-up', self.releaseItem)
+        self.accept('mouse3', self.onRightMousePress)
+        self.accept('mouse3-up', self.onRightMouseRelease)
+        self.accept('wheel_up', self.zoomIn)
+        self.accept('wheel_down', self.zoomOut)
+
+        self.startH = 45
+        self.vid = False
+        self.furniture = []
+        self.BMode = self.toggleButton['indicatorValue']
+        self.lensBM = OrthographicLens()
+        aspect_ratio = base.win.getXSize() / base.win.getYSize()
+        self.lensBM.setFilmSize(60 * aspect_ratio, 60)
+        self.lens = PerspectiveLens()
+        self.lens.setFov(base.camLens.getFov())
+        self.lens.setNear(base.camLens.getNear())
+        self.lens.setFar(base.camLens.getFar())
+        self.grid = True
+        self.transitionBlock = False
+        self.lineNodePaths = []
     
     def init_Buttons_and_Interfaces(self):
         def cameraTransitionUp(t):
@@ -119,17 +151,17 @@ class MyApp(ShowBase):
         )
 
         self.toggleButton = DirectCheckButton(
-            text="Toggle Builder Mode",
-            scale=0.1,
-            pos=(.5, 1.5, 0.5),
+            text="Builder Mode",
+            scale=0.05,
+            pos=(1, 0, .8),
             indicatorValue = 1,
             command=self.toggleBM
         )
 
         self.gridButton = DirectCheckButton(
             text="Toggle Grid",
-            scale=0.1,
-            pos=(-.5, 3.5, .5),
+            scale=0.05,
+            pos=(1, 0, .7),
             indicatorValue = 1,
             command=self.toggleGrid
         )
@@ -144,50 +176,32 @@ class MyApp(ShowBase):
     def createRoom(self):
         # Create a single node for all walls
         self.roomNode = self.render.attachNewNode("Room")
-        self.countWall = 0
 
         # Create individual walls
-        self.leftWall = self.createWall(self.bl, self.tl, self._bl, self._tl, (1,0,0,1))
-        self.rightWall = self.createWall(self.br, self.tr, self._br, self._tr, (0,1,0,1))
-        self.frontWall = self.createWall(self.bl, self.br, self._bl, self._br, (0,0,1,1))
-        self.backWall = self.createWall(self.tl, self.tr, self._tl, self._tr, (1,1,0,1))
-        self.floor = self.createWall(self._bl, self._br, self._tl, self._tr, (1,0,1,1))
-        self.roof = self.createWall(self.bl, self.br, self.tl, self.tr, (0,1,1,1))
-        
-        # Attach walls to the room node
-        self.roomNode.attachNewNode(self.leftWall)
-        self.roomNode.attachNewNode(self.rightWall)
-        self.roomNode.attachNewNode(self.frontWall)
-        self.roomNode.attachNewNode(self.backWall)
-        self.roomNode.attachNewNode(self.floor)
-        self.roomNode.attachNewNode(self.roof)
+        self.createWall(self.bl, self.tl, self._bl, self._tl, (1,0,0,1))
+        self.createWall(self.tr, self.br, self._tr, self._br, (0,1,0,1))
+        self.createWall(self.br, self.bl, self._br, self._bl, (0,0,1,1))
+        self.createWall(self.tl, self.tr, self._tl, self._tr, (1,1,0,1))
+        self.createWall(self._br, self._bl, self._tr, self._tl, (1,0,1,1), walls=False)
+        self.createWall(self.bl, self.br, self.tl, self.tr, (0,1,1,1), walls=False)
 
-    def createWall(self, p1, p2, p3, p4, color):
+    def createWall(self, p1, p2, p3, p4, color, walls = True):
         format = GeomVertexFormat.getV3c4()
         vdata = GeomVertexData('wall', format, Geom.UHDynamic)
 
         vertex = GeomVertexWriter(vdata, 'vertex')
         vertexColor = GeomVertexWriter(vdata, 'color')
 
-        # Define vertices for the wall
-        vertex.addData3(p1)
-        vertex.addData3(p2)
-        vertex.addData3(p3)
-        vertex.addData3(p4)
-
-        # Set color for the wall
-        for _ in range(4):
+        vertices = [p1, p2, p3, p4]
+        for vert in vertices:
+            vertex.addData3(vert)
             vertexColor.addData4(color)
 
+
         tris = GeomTriangles(Geom.UHDynamic)
-        if color == (1,0,0,1) or color == (1,1,0,1) or color == (0,1,1,1):
-            tris.addVertices(0, 2, 1)
-            tris.addVertices(1, 2, 3)
-            polygon = CollisionPolygon(p3, p4, p2, p1)
-        else:
-            tris.addVertices(0, 1, 2)
-            tris.addVertices(1, 3, 2)
-            polygon = CollisionPolygon(p1, p2, p4, p3)
+        tris.addVertices(0, 2, 1)
+        tris.addVertices(1, 2, 3)
+        polygon = CollisionPolygon(p3, p4, p2, p1)
 
         wall = Geom(vdata)
         wall.addPrimitive(tris)
@@ -204,71 +218,29 @@ class MyApp(ShowBase):
         self.cnodePath = wallNodePath.attachNewNode(cnode)
         self.picker.addCollider(self.cnodePath, self.pq)
         
-        if self.countWall == 0:
-            colTube1 = CollisionTube(p1, p3, 0.5)
-            colTube2 = CollisionTube(p2, p4, 0.5)
-            dNode1 = CollisionNode('wall_dNode1')
-            dNode2 = CollisionNode('wall_dNode2')
-            dNode1.addSolid(colTube1)
-            dNode2.addSolid(colTube2)
-            dNode1.setIntoCollideMask(BitMask32.bit(1))
-            dNode1.set_from_collide_mask(0)
-            dNode2.setIntoCollideMask(BitMask32.bit(1))
-            dNode2.set_from_collide_mask(0)
-            self.dNodePath1 = wallNodePath.attachNewNode(dNode1)
-            self.dNodePath2 = wallNodePath.attachNewNode(dNode2)
-            self.picker.addCollider(self.dNodePath1, self.pq)
-            self.picker.addCollider(self.dNodePath2, self.pq)
+        if walls:
+            colTube = CollisionTube(p1, p3, 0.5)
+            dNode = CollisionNode('wall_dNode')
+            dNode.addSolid(colTube)
+            dNode.setIntoCollideMask(BitMask32.bit(1))
+            dNode.set_from_collide_mask(0)
+            dNodePath = wallNodePath.attachNewNode(dNode)
+            self.picker.addCollider(dNodePath, self.pq)
+            self.tubsphPaths.append(dNodePath)
         
-        if self.countWall == 1:
-            colTube3 = CollisionTube(p1, p3, 0.5)
-            colTube4 = CollisionTube(p2, p4, 0.5)
-            dNode3 = CollisionNode('wall_dNode3')
-            dNode4 = CollisionNode('wall_dNode4')
-            dNode3.addSolid(colTube3)
-            dNode4.addSolid(colTube4)
-            dNode3.setIntoCollideMask(BitMask32.bit(1))
-            dNode3.set_from_collide_mask(0)
-            dNode4.setIntoCollideMask(BitMask32.bit(1))
-            dNode4.set_from_collide_mask(0)
-            self.dNodePath3 = wallNodePath.attachNewNode(dNode3)
-            self.dNodePath4 = wallNodePath.attachNewNode(dNode4)
-            self.picker.addCollider(self.dNodePath3, self.pq)
-            self.picker.addCollider(self.dNodePath4, self.pq)
-        
-        pAvg = (p1 + p2 + p3 + p4) / 4
-        
-        if self.countWall <= 1:
+            pAvg = (p1 + p2 + p3 + p4) / 4
             
             sphere = CollisionSphere(pAvg.x, pAvg.y, pAvg.z, 0.5)
             sphereNode = CollisionNode('wall_sphere')
             sphereNode.addSolid(sphere)
             sphereNode.setIntoCollideMask(BitMask32.bit(1))
             sphereNode.set_from_collide_mask(0)
-            if self.countWall == 0:
-                self.sphereNodePath1 = wallNodePath.attachNewNode(sphereNode)
-                self.picker.addCollider(self.sphereNodePath1, self.pq)
-            else:
-                self.sphereNodePath2 = wallNodePath.attachNewNode(sphereNode)
-                self.picker.addCollider(self.sphereNodePath2, self.pq)
+            sphereNodePath = wallNodePath.attachNewNode(sphereNode)
+            self.picker.addCollider(sphereNodePath, self.pq)
+            self.tubsphPaths.append(sphereNodePath)
 
-        elif self.countWall <= 3:
-            sphere = CollisionSphere(pAvg.x, pAvg.y, pAvg.z, 0.5)
-            sphereNode = CollisionNode('wall_sphere')
-            sphereNode.addSolid(sphere)
-            sphereNode.setIntoCollideMask(BitMask32.bit(1))
-            sphereNode.set_from_collide_mask(0)
-            if self.countWall == 2:
-                self.sphereNodePath3 = wallNodePath.attachNewNode(sphereNode)
-                self.picker.addCollider(self.sphereNodePath3, self.pq)
-            elif self.countWall == 3:
-                self.sphereNodePath4 = wallNodePath.attachNewNode(sphereNode)
-                self.picker.addCollider(self.sphereNodePath4, self.pq)
-
-
-
-        self.countWall += 1
-        return wallNode
+        self.roomNode.attachNewNode(wallNode)
+        return
 
     def moveCorner(self, corner, x, y):
         for corner in corner:
@@ -307,30 +279,6 @@ class MyApp(ShowBase):
         self.roomNode.removeNode()
         self.createRoom()
         self.BMInterface()
-    
-    def variables(self):
-        self.dragging = False
-        self.collision_node = False
-        self.mouseTask = taskMgr.add(self.mouseTask, 'mouseTask')
-        self.accept('mouse1', self.grabItem)
-        self.accept('mouse1-up', self.releaseItem)
-        self.accept('mouse3', self.onRightMousePress)
-        self.accept('mouse3-up', self.onRightMouseRelease)
-        self.accept('wheel_up', self.zoomIn)
-        self.accept('wheel_down', self.zoomOut)
-
-        self.startH = 45
-        self.vid = False
-        self.furniture = []
-        self.BMode = self.toggleButton['indicatorValue']
-        self.lensBM = OrthographicLens()
-        aspect_ratio = base.win.getXSize() / base.win.getYSize()
-        self.lensBM.setFilmSize(60 * aspect_ratio, 60)
-        self.lens = PerspectiveLens()
-        self.lens.setFov(base.camLens.getFov())
-        self.lens.setNear(base.camLens.getNear())
-        self.lens.setFar(base.camLens.getFar())
-        self.grid = True
     
     def toggleGrid(self, status):
         self.grid = status
@@ -431,58 +379,25 @@ class MyApp(ShowBase):
 
     def mouseTask(self, task):
         def setlimit(x,y):
-            if x > self.tr.getX():
-                x = self.tr.getX()
-            elif x < self.tl.getX():
-                x = self.tl.getX()
-            if y > self.tl.getY():
-                y = self.tl.getY()
-            elif y < self.bl.getY():
-                y = self.bl.getY()
+            x = min(x, self.tr.getX())
+            x = max(x, self.tl.getX())
+            y = min(y, self.tl.getY())
+            y = max(y, self.bl.getY())
+
+            print(x,y)
             return x,y
         if self.state == CameraState.BIRD_EYE:
 
             if self.BMode:
-                self.dNodePath1.show()
-                self.dNodePath2.show()
-                self.dNodePath3.show()
-                self.dNodePath4.show()
-                self.sphereNodePath1.show()
-                self.sphereNodePath2.show()
-                self.sphereNodePath3.show()
-                self.sphereNodePath4.show()
+                for i in range(len(self.tubsphPaths)):
+                    self.tubsphPaths[i].show()
                 self.transitionBlock = True
             else:
-                self.dNodePath1.hide()
-                self.dNodePath2.hide()
-                self.dNodePath3.hide()
-                self.dNodePath4.hide()
-                self.sphereNodePath1.hide()
-                self.sphereNodePath2.hide()
-                self.sphereNodePath3.hide()
-                self.sphereNodePath4.hide()
+                for i in range(len(self.tubsphPaths)):
+                    self.tubsphPaths[i].hide()
                 self.transitionBlock = False
 
             if self.mouseWatcherNode.hasMouse():  
-                if not hasattr(self, 'dragbl'):
-                        self.dragbl = False
-                if not hasattr(self, 'dragtl'):
-                        self.dragtl = False
-                if not hasattr(self, 'dragbr'):
-                        self.dragbr = False
-                if not hasattr(self, 'dragtr'):
-                        self.dragtr = False
-                if not hasattr(self, 'draglw'):
-                        self.draglw = False
-                if not hasattr(self, 'dragtw'):
-                        self.dragtw = False
-                if not hasattr(self, 'dragrw'):
-                        self.dragrw = False
-                if not hasattr(self, 'dragbw'):
-                        self.dragbw = False
-
-
-
                 self.mpos = self.mouseWatcherNode.getMouse()
                 self.pickerRay.setFromLens(self.camNode, self.mpos.getX(), self.mpos.getY())
                 nearPoint = render.getRelativePoint(
@@ -722,17 +637,16 @@ class MyApp(ShowBase):
             self.text.setText(self.bmsg)
             self.BMInterface()
             self.camNode.setLens(self.lensBM)
+            self.gridButton['state'] = DGG.NORMAL
+            
         else:
             self.BMode = False
             self.text.setText(self.msg)
             self.BMInterface()
             self.camNode.setLens(self.lens)
+            self.gridButton['state'] = DGG.DISABLED
 
     def BMInterface(self):
-        if not hasattr(self, 'lineNodePaths'):
-            self.lineNodePaths = []
-
-        # Remove any previously added lines
         for lineNodePath in self.lineNodePaths:
             lineNodePath.removeNode()
 
@@ -747,7 +661,6 @@ class MyApp(ShowBase):
             self.lines.setColor(1, 1, 1, 1)
             self.lines.setThickness(3)
             text_offset = -3, 4
-            line_offset = 2
 
             for i,side in enumerate(self.sides):
                 midpoint, lenght = calc(side[0], side[1])
@@ -759,8 +672,8 @@ class MyApp(ShowBase):
                 textNodePath = render.attachNewNode(text)
 
                 if i%2 == 0:
-                    self.lines.moveTo(side[0].x + np.sign(side[0].x)*line_offset, side[0].y, side[0].z)
-                    self.lines.drawTo(side[1].x + np.sign(side[1].x)*line_offset, side[1].y, side[1].z)
+                    self.lines.moveTo(side[0].x, side[0].y, side[0].z)
+                    self.lines.drawTo(side[1].x, side[1].y, side[1].z)
                     if i == 0:
                         textNodePath.setPos(midpoint[0]+text_offset[0], midpoint[1] - offset, midpoint[2])
                     elif i == 2:
@@ -768,8 +681,8 @@ class MyApp(ShowBase):
                     textNodePath.setHpr(90, -90, 0)
                     
                 else:
-                    self.lines.moveTo(side[0].x, side[0].y + np.sign(side[0].y)*line_offset, side[0].z)
-                    self.lines.drawTo(side[1].x, side[1].y + np.sign(side[1].y)*line_offset, side[1].z)
+                    self.lines.moveTo(side[0].x, side[0].y, side[0].z)
+                    self.lines.drawTo(side[1].x, side[1].y, side[1].z)
                     if i == 1:
                         textNodePath.setPos(midpoint[0] - offset, midpoint[1]-text_offset[0], midpoint[2])
                     elif i == 3:
@@ -787,8 +700,6 @@ class MyApp(ShowBase):
                 lineNodePath.setLightOff()
                 textNodePath.setLightOff()
 
-
-                # Optionally, store this textNodePath too, if you need to modify or delete it later
                 self.lineNodePaths.append(textNodePath)
 
 
